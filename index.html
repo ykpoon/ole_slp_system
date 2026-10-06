@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OLE 活動記錄與 SLP 生成平台</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* 列印樣式：確保生成通告與 SLP 符合 A4 規格 */
+    @media print {
+      body * { visibility: hidden; }
+      .printable, .printable * { visibility: visible; }
+      .printable { position: absolute; left: 0; top: 0; width: 100%; }
+      .page-break { page-break-after: always; }
+      .no-print { display: none !important; }
+    }
+  </style>
+</head>
+<body class="bg-gray-100 text-gray-800 font-sans">
+
+  <!-- 導航列 -->
+  <nav class="bg-blue-800 text-white p-4 shadow-md no-print">
+    <div class="max-w-7xl mx-auto flex justify-between items-center">
+      <h1 class="text-xl font-bold">🏫 OLE 學習經歷與獎項管理平台</h1>
+      <div class="space-x-2">
+        <button onclick="switchTab('create-activity')" class="px-3 py-1 rounded bg-blue-700 hover:bg-blue-600">1. 發起活動與通告</button>
+        <button onclick="switchTab('activity-list')" class="px-3 py-1 rounded bg-blue-700 hover:bg-blue-600">2. 活動與名單記錄</button>
+        <button onclick="switchTab('slp-generate')" class="px-3 py-1 rounded bg-yellow-500 hover:bg-yellow-400 text-blue-900 font-bold">3. 一鍵生成 SLP</button>
+      </div>
+    </div>
+  </nav>
+
+  <main class="max-w-7xl mx-auto p-6">
+    <!-- 模組 1: 發起活動與生成通告 -->
+    <section id="tab-create-activity" class="space-y-6">
+      <div class="bg-white p-6 rounded-lg shadow no-print">
+        <h2 class="text-lg font-bold border-b pb-2 mb-4 text-blue-800">📌 步驟一：發起活動並出通告</h2>
+        <form id="activityForm" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label class="block text-sm font-semibold mb-1">學年</label>
+            <input type="text" id="actYear" value="2025-2026" class="w-full border p-2 rounded">
+          </div>
+          <div>
+            <label class="block text-sm font-semibold mb-1">通告編號</label>
+            <input type="text" id="actNoticeNo" value="N2526-042" class="w-full border p-2 rounded">
+          </div>
+          <div>
+            <label class="block text-sm font-semibold mb-1">活動名稱</label>
+            <input type="text" id="actTitle" value="全港中學校際三人籃球馬拉松" class="w-full border p-2 rounded">
+          </div>
+          <div>
+            <label class="block text-sm font-semibold mb-1">舉辦科組 / 機構</label>
+            <input type="text" id="actOrganizer" value="體育科" class="w-full border p-2 rounded">
+          </div>
+          <div>
+            <label class="block text-sm font-semibold mb-1">負責老師</label>
+            <input type="text" id="actTeacher" value="朱賢煒 老師" class="w-full border p-2 rounded">
+          </div>
+          <div>
+            <label class="block text-sm font-semibold mb-1">活動日期</label>
+            <input type="date" id="actDate" value="2026-06-30" class="w-full border p-2 rounded">
+          </div>
+          <div>
+            <label class="block text-sm font-semibold mb-1">主要範疇 (OLE)</label>
+            <select id="actCategory" class="w-full border p-2 rounded">
+              <option value="體育發展">體育發展</option>
+              <option value="藝術發展">藝術發展</option>
+              <option value="德育及公民教育">德育及公民教育</option>
+              <option value="社會服務">社會服務</option>
+              <option value="與工作有關的經驗">與工作有關的經驗</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-semibold mb-1">時數</label>
+            <input type="number" id="actHours" value="3" class="w-full border p-2 rounded">
+          </div>
+          <div class="flex items-end">
+            <button type="button" onclick="generateNotice()" class="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 font-semibold">
+              📄 生成通告草稿
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- 通告草稿預覽區 (列印區域) -->
+      <div id="noticePreviewWrapper" class="hidden bg-white p-8 rounded-lg shadow printable">
+        <div class="text-center mb-6">
+          <h2 class="text-xl font-bold">香港紅卍字會大埔卍慈中學</h2>
+          <h3 class="text-lg font-semibold mt-1">學校活動通告草稿</h3>
+          <p class="text-sm text-gray-500 mt-1">通告編號：<span id="pNoticeNo"></span></p>
+        </div>
+        <div class="space-y-3 leading-relaxed text-sm">
+          <p>敬啟者：</p>
+          <p>為了促進學生多元潛能發展，本校<span id="pOrganizer" class="font-bold"></span>將舉辦「<span id="pTitle" class="font-bold underline"></span>」活動，詳情如下：</p>
+          <ul class="list-disc pl-6 space-y-1">
+            <li>活動日期：<span id="pDate"></span></li>
+            <li>OLE 範疇：<span id="pCategory"></span>（預計 OLE 時數：<span id="pHours"></span> 小時）</li>
+            <li>負責老師：<span id="pTeacher"></span></li>
+          </ul>
+          <p>請 貴家長細閱上述安排，並簽署以下回條交回負責老師。</p>
+          <div class="text-right mt-6">
+            <p>校長 啟</p>
+            <p id="pCurrentDate" class="text-gray-500"></p>
+          </div>
+        </div>
+        <hr class="my-6 border-dashed border-gray-400">
+        <div class="text-sm">
+          <p class="font-bold text-center mb-2">【家長回條】</p>
+          <p>本人已知悉「<span id="pReplyTitle"></span>」之活動安排，並（同意 / 不同意）敝子弟參加。</p>
+          <div class="flex justify-between mt-6">
+            <span>學生姓名：___________ (班別：____ 班號：____)</span>
+            <span>家長簽署：___________</span>
+          </div>
+        </div>
+        <div class="mt-6 text-center no-print">
+          <button onclick="window.print()" class="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700">🖨️ 列印通告草稿</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 模組 2: 活動與名單記錄 -->
+    <section id="tab-activity-list" class="hidden space-y-6">
+      <div class="bg-white p-6 rounded-lg shadow">
+        <h2 class="text-lg font-bold border-b pb-2 mb-4 text-blue-800">📋 步驟二：活動後補入學生參與名單及獲獎</h2>
+        <div class="mb-4 flex justify-between items-center">
+          <span class="text-sm text-gray-600">已選活動：<strong>(初級組)2025-2026年度全港中學校際三人籃球馬拉松</strong></span>
+          <button class="bg-indigo-600 text-white px-4 py-1 rounded text-sm hover:bg-indigo-700">+ 新增參與學生</button>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-sm border-collapse">
+            <thead>
+              <tr class="bg-gray-100 border-b">
+                <th class="p-2">學年</th>
+                <th class="p-2">班別</th>
+                <th class="p-2">班號</th>
+                <th class="p-2">學生姓名</th>
+                <th class="p-2">參與角色</th>
+                <th class="p-2">時數</th>
+                <th class="p-2">成就 / 獎項</th>
+                <th class="p-2">操作</th>
+              </tr>
+            </thead>
+            <tbody id="studentRecordsBody">
+              <!-- JS 動態渲染預設名單 -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- 模組 3: 一鍵生成 SLP -->
+    <section id="tab-slp-generate" class="hidden space-y-6">
+      <div class="bg-white p-6 rounded-lg shadow no-print flex justify-between items-center">
+        <div>
+          <h2 class="text-lg font-bold text-blue-800">🎓 步驟三：一鍵生成學生學習概覽 (SLP)</h2>
+          <p class="text-sm text-gray-500">已自動載入學生基本資料、高中學科成績、OLE 經歷及自述文本</p>
+        </div>
+        <button onclick="window.print()" class="bg-red-600 text-white font-bold px-6 py-2 rounded hover:bg-red-700">
+          📥 一鍵列印 / 匯出 PDF
+        </button>
+      </div>
+
+      <!-- SLP 標準 3 頁式渲染區 -->
+      <div id="slpContainer" class="bg-white p-10 rounded-lg shadow text-gray-900 printable max-w-4xl mx-auto border">
+        <!-- 頁 1: 基本資料 + 校內成績 -->
+        <div class="page-break space-y-6">
+          <div class="text-center">
+            <h1 class="text-xl font-bold tracking-wider">香港紅卍字會大埔卍慈中學</h1>
+            <p class="text-xs text-gray-500">HONG KONG RED SWASTIKA SOCIETY TAI PO SECONDARY SCHOOL</p>
+            <h2 class="text-2xl font-bold mt-4 tracking-widest bg-gray-200 inline-block px-4 py-1">學生學習概覽</h2>
+          </div>
+
+          <div class="border border-teal-600">
+            <div class="bg-teal-700 text-white px-3 py-1 font-bold text-sm">學生資料</div>
+            <div class="grid grid-cols-2 p-3 text-sm gap-2">
+              <div>學生姓名：<span class="font-semibold">莊梓樂</span></div>
+              <div>身份證號碼：<span class="font-semibold">R8379075</span></div>
+              <div>出生日期：<span>29/12/2007</span></div>
+              <div>性別：<span>M</span></div>
+              <div>入學日期：<span>01/09/2020</span></div>
+              <div>學校編號：<span>190730</span></div>
+            </div>
+          </div>
+
+          <div class="border border-teal-600">
+            <div class="bg-teal-700 text-white px-3 py-1 font-bold text-sm">校內學科成績</div>
+            <table class="w-full text-sm text-center border-collapse">
+              <thead>
+                <tr class="bg-gray-100 border-b">
+                  <th rowspan="2" class="border p-2">科目</th>
+                  <th colspan="2" class="border p-1">2025-2026 (中六)</th>
+                  <th colspan="2" class="border p-1">2024-2025 (中五)</th>
+                  <th colspan="2" class="border p-1">2023-2024 (中四)</th>
+                </tr>
+                <tr class="bg-gray-50 border-b text-xs">
+                  <th class="border p-1">滿分</th><th class="border p-1">校內表現</th>
+                  <th class="border p-1">滿分</th><th class="border p-1">校內表現</th>
+                  <th class="border p-1">滿分</th><th class="border p-1">校內表現</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td class="border p-1">中國語文</td><td class="border">200</td><td class="border">101</td><td class="border">200</td><td class="border">110</td><td class="border">200</td><td class="border">115</td></tr>
+                <tr><td class="border p-1">英國語文</td><td class="border">200</td><td class="border text-red-600">(75)</td><td class="border">200</td><td class="border">94</td><td class="border">200</td><td class="border">113</td></tr>
+                <tr><td class="border p-1">數學</td><td class="border">200</td><td class="border">137</td><td class="border">200</td><td class="border">161</td><td class="border">200</td><td class="border">170</td></tr>
+                <tr><td class="border p-1">公民與社會發展</td><td class="border">50</td><td class="border">32</td><td class="border">50</td><td class="border">29</td><td class="border">50</td><td class="border">34</td></tr>
+                <tr><td class="border p-1">視覺藝術</td><td class="border">100</td><td class="border">79</td><td class="border">100</td><td class="border">80</td><td class="border">100</td><td class="border">85</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 頁 2: 其他學習經歷 (OLE) 與獎項 -->
+        <div class="page-break space-y-6 pt-6">
+          <div class="border border-teal-600">
+            <div class="bg-teal-700 text-white px-3 py-1 font-bold text-sm">其他學習經歷 (OLE)</div>
+            <table class="w-full text-xs text-left border-collapse">
+              <thead class="bg-gray-100 border-b">
+                <tr>
+                  <th class="border p-1">活動項目</th>
+                  <th class="border p-1">學年</th>
+                  <th class="border p-1">角色</th>
+                  <th class="border p-1">舉辦單位</th>
+                  <th class="border p-1">主要範疇</th>
+                  <th class="border p-1">成就 / 獎項</th>
+                </tr>
+              </thead>
+              <tbody id="slpOleTableBody">
+                <!-- 動態注入 OLE 項目 -->
+              </tbody>
+            </table>
+          </div>
+
+          <div class="border border-teal-600">
+            <div class="bg-teal-700 text-white px-3 py-1 font-bold text-sm">校內頒發的主要獎項及成就</div>
+            <div class="p-2 text-xs space-y-1">
+              <div>• 2023/2024 數學科第三名</div>
+              <div>• 2023/2024 視覺藝術科第一名</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 頁 3: 學生自述 (Student Self-Account) -->
+        <div class="pt-6 space-y-4">
+          <div class="border border-teal-600">
+            <div class="bg-teal-700 text-white px-3 py-1 font-bold text-sm">學生的自述</div>
+            <div class="p-4 text-sm leading-relaxed text-justify space-y-3">
+              <p>我是一個熱愛創作、對藝術充滿熱情的學生。</p>
+              <p>在高中階段，我參與了各種藝術活動，創作了許多美術作品，這些包括紙質立體模型和平
+面插畫等。校外，我也積極進行素描動漫和書法練習，特別喜歡自行設計動漫角色及進行速寫。這些藝術創作經歷不僅增強了我的美術技能，還激發了我對插畫師職業的探索欲望。</p>
+              <p>此外，我也曾參與「藍天綠地在香港」設計比賽並獲得冠軍。在面對隊友缺席的困境下，我頂住壓力堅持完成作品，這段經歷讓我學會在高壓環境下保持冷靜與毅力。</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
